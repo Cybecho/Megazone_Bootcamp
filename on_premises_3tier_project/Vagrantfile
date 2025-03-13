@@ -56,13 +56,13 @@ Vagrant.configure("2") do |config|
         end
   
         machine.vm.provision "shell", inline: <<-'SHELL'
-          # 에러가 발생해도 provisioning이 중단되지 않도록 설정
+          # 에러 발생해도 프로비저닝 중단하지 않음
           set +e
   
           apt-get update -y || true
           apt-get upgrade -y || true
   
-          # Docker 등 기본 패키지 설치 스크립트
+          # Docker 등 기본 패키지 설치 스크립트 실행
           curl -fsSL https://raw.githubusercontent.com/Cybecho/LinuxSetup/main/install_package_all.sh | bash || true
   
           echo "root:root" | chpasswd || true
@@ -70,10 +70,8 @@ Vagrant.configure("2") do |config|
           # 서버별 Netplan 설정
           case "$(hostname)" in
             SERVER-0-ROUTER)
-              # 간단한 라우팅 설정 & IP 포워딩
               echo 1 > /proc/sys/net/ipv4/ip_forward
               echo "net.ipv4.ip_forward=1" >> /etc/sysctl.conf
-  
               cat <<EOF > /etc/netplan/50-vagrant.yaml
   network:
     version: 2
@@ -206,12 +204,30 @@ Vagrant.configure("2") do |config|
               ;;
           esac
   
-          # netplan 적용. 에러 발생해도 프로비저닝 중단되지 않도록
           netplan apply || true
   
-          # Docker 서비스 시작 및 활성화. 에러 발생해도 계속 진행
           systemctl start docker || true
           systemctl enable docker || true
+  
+          # 각 서버에 맞는 추가 스크립트 실행
+          case "$(hostname)" in
+            SERVER-1-WEB)
+              echo "WEB 서버 설정 스크립트 실행 중..."
+              curl -fsSL https://raw.githubusercontent.com/Cybecho/LinuxSetup/main/on_premises_3tier_project/config_server_web.sh | sudo bash
+              ;;
+            SERVER-2-1-WAS1)
+              echo "WAS 1 서버 설정 스크립트 실행 중..."
+              curl -fsSL https://raw.githubusercontent.com/Cybecho/LinuxSetup/main/on_premises_3tier_project/config_server_was1.sh | sudo bash
+              ;;
+            SERVER-2-2-WAS2)
+              echo "WAS 2 서버 설정 스크립트 실행 중..."
+              curl -fsSL https://raw.githubusercontent.com/Cybecho/LinuxSetup/main/on_premises_3tier_project/config_server_was2.sh | sudo bash
+              ;;
+            SERVER-3-DB)
+              echo "DB 서버 설정 스크립트 실행 중..."
+              curl -fsSL https://raw.githubusercontent.com/Cybecho/LinuxSetup/main/on_premises_3tier_project/config_server_db.sh | sudo bash
+              ;;
+          esac
         SHELL
       end
     end
