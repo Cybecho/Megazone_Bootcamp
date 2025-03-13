@@ -8,32 +8,43 @@ Vagrant.configure("2") do |config|
       {net: "vboxnet2", ip: "192.168.2.250"},
       {net: "vboxnet3", ip: "192.168.3.250"},
       {net: "vboxnet4", ip: "192.168.4.250"}
-    ], nat: true, ports: [2201, 80, 443]},
+    ], nat: true, ports: [2201]},
+    
     {name: 'SERVER-1-WEB', adapters: [
-      {net: "vboxnet1", ip: "192.168.1.10"},
-      {net: "vboxnet5", ip: "120.0.0.10"}
-    ], port: 2202},
+      {net: "vboxnet1", ip: "192.168.1.10"}
+    ], nat: true, port_forwarding: [
+      {host: "127.0.0.1", host_port: 80, guest_ip: "192.168.1.10", guest_port: 80},
+      {host: "127.0.0.1", host_port: 443, guest_ip: "192.168.1.10", guest_port: 443}
+    ]},
+
     {name: 'SERVER-2-1-WAS1', adapters: [
-      {net: "vboxnet2", ip: "192.168.2.10"},
-      {net: "vboxnet5", ip: "120.0.0.21"}
-    ], port: 2203},
+      {net: "vboxnet2", ip: "192.168.2.10"}
+    ]},
+
     {name: 'SERVER-2-2-WAS2', adapters: [
-      {net: "vboxnet2", ip: "192.168.2.20"},
-      {net: "vboxnet5", ip: "120.0.0.22"}
-    ], port: 2204},
+      {net: "vboxnet2", ip: "192.168.2.20"}
+    ]},
+
     {name: 'SERVER-3-DB', adapters: [
-      {net: "vboxnet3", ip: "192.168.3.10"},
-      {net: "vboxnet5", ip: "120.0.0.30"}
-    ], port: 2205},
+      {net: "vboxnet3", ip: "192.168.3.10"}
+    ]},
+
     {name: 'SERVER-4-Bastion', adapters: [
-      {net: "vboxnet4", ip: "192.168.4.10"},
-      {net: "vboxnet5", ip: "120.0.0.40"}
-    ], port: 2206},
+      {net: "vboxnet4", ip: "192.168.4.10"}
+    ], nat: true, port_forwarding: [
+      {host: "127.0.0.1", host_port: 22222, guest_ip: "192.168.4.10", guest_port: 22}
+    ]}
   ]
 
   nodes.each do |node|
     config.vm.define node[:name], autostart: true do |machine|
       machine.vm.hostname = node[:name]
+      
+      # SSH 키 인증 제거 및 비밀번호 인증 자동 사용 설정
+      machine.ssh.insert_key      = false
+      machine.ssh.username        = "vagrant"
+      machine.ssh.password        = "vagrant"
+      machine.ssh.private_key_path = []  # 키 파일 사용 안 함
 
       machine.vm.provider "virtualbox" do |vb|
         vb.name = node[:name]
@@ -42,7 +53,7 @@ Vagrant.configure("2") do |config|
         vb.customize ["modifyvm", :id, "--groups", "/nslookup"]
       end
 
-      # NAT 호스트는 node[:ports] 배열에 있는 모든 포트를 포워딩
+      # NAT 설정: 포트 포워딩 (필요한 경우)
       if node[:nat]
         node[:ports].each do |port|
           machine.vm.network "forwarded_port", guest: (port == 2201 ? 22 : port), host: port, auto_correct: true
@@ -51,21 +62,26 @@ Vagrant.configure("2") do |config|
         machine.vm.network "forwarded_port", guest: 22, host: node[:port], auto_correct: true
       end
 
+      # Private network 어댑터 설정
       node[:adapters].each do |adapter|
         machine.vm.network "private_network", ip: adapter[:ip], virtualbox__hostonly: adapter[:net]
       end
 
+      # 프로비저닝: 시스템 업데이트, 패키지 설치 및 SSH 비밀번호 인증 활성화
       machine.vm.provision "shell", inline: <<-'SHELL'
-        # 에러 발생해도 프로비저닝 중단하지 않음
         set +e
 
         apt-get update -y || true
         apt-get upgrade -y || true
 
-        # Docker 등 기본 패키지 설치 스크립트 실행
+        # 기본 패키지 설치 (필요시)
         curl -fsSL https://raw.githubusercontent.com/Cybecho/Megazone_Bootcamp/main/install_package_all.sh | bash || true
 
         echo "root:root" | chpasswd || true
+
+        # SSH 설정: 비밀번호 인증 활성화 (키 기반 인증 제거)
+        sudo sed -i 's/^PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config
+        sudo systemctl restart ssh
 
         # 서버별 Netplan 설정
         case "$(hostname)" in
@@ -86,7 +102,7 @@ network:
     enp0s10:
       addresses:
         - 192.168.3.250/24
-    enp0s11:
+    enp0s16:
       addresses:
         - 192.168.4.250/24
 EOF
@@ -103,13 +119,6 @@ network:
       routes:
         - to: 192.168.0.0/16
           via: 192.168.1.250
-          metric: 50
-    enp0s9:
-      addresses:
-        - 120.0.0.10/24
-      routes:
-        - to: 120.0.0.0/8
-          scope: link
 EOF
             ;;
           SERVER-2-1-WAS1)
@@ -127,13 +136,6 @@ network:
           metric: 50
         - to: 192.168.3.0/24
           via: 192.168.2.250
-          metric: 50
-    enp0s9:
-      addresses:
-        - 120.0.0.21/24
-      routes:
-        - to: 120.0.0.0/8
-          scope: link
 EOF
             ;;
           SERVER-2-2-WAS2)
@@ -151,13 +153,6 @@ network:
           metric: 50
         - to: 192.168.3.0/24
           via: 192.168.2.250
-          metric: 50
-    enp0s9:
-      addresses:
-        - 120.0.0.22/24
-      routes:
-        - to: 120.0.0.0/8
-          scope: link
 EOF
             ;;
           SERVER-3-DB)
@@ -172,13 +167,6 @@ network:
       routes:
         - to: 192.168.2.0/24
           via: 192.168.3.250
-          metric: 50
-    enp0s9:
-      addresses:
-        - 120.0.0.30/24
-      routes:
-        - to: 120.0.0.0/8
-          scope: link
 EOF
             ;;
           SERVER-4-Bastion)
@@ -193,13 +181,6 @@ network:
       routes:
         - to: 192.168.0.0/16
           via: 192.168.4.250
-          metric: 50
-    enp0s9:
-      addresses:
-        - 120.0.0.40/24
-      routes:
-        - to: 120.0.0.0/8
-          scope: link
 EOF
             ;;
         esac
@@ -209,7 +190,7 @@ EOF
         systemctl start docker || true
         systemctl enable docker || true
 
-        # 각 서버에 맞는 추가 스크립트 실행
+        # 각 서버에 따른 추가 설정 스크립트 실행
         case "$(hostname)" in
           SERVER-1-WEB)
             echo "WEB 서버 설정 스크립트 실행 중..."

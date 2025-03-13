@@ -1,5 +1,7 @@
 #!/bin/bash
-set -e
+
+# 스크립트 실행 중 오류 발생 시 중단
+# set -e
 
 echo "=== [1] 디렉토리 생성 중 ==="
 mkdir -p /root/docker/redis
