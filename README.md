@@ -20,7 +20,7 @@ DB 서버: 192.168.3.10
 
 **설치 명령:**  
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Cybecho/LinuxSetup/main/on_premises_3tier_project/config_server_web.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/Cybecho/Megazone_Bootcamp/main/on_premises_3tier_project/config_server_web.sh | sudo bash
 ```
 
 > 이 스크립트에서는 Apache2 Dockerfile 내 BalancerMember 설정을 통해 WAS 서버(192.168.2.10, 192.168.2.20)로 트래픽을 프록시하도록 구성되어 있습니다.
@@ -32,7 +32,7 @@ curl -fsSL https://raw.githubusercontent.com/Cybecho/LinuxSetup/main/on_premises
 
 **설치 명령:**  
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Cybecho/LinuxSetup/main/on_premises_3tier_project/config_server_was1.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/Cybecho/Megazone_Bootcamp/main/on_premises_3tier_project/config_server_was1.sh | sudo bash
 ```
 
 > 이 스크립트에서는 PHP 웹 소스(index.php) 내에서 DB 연결(host=192.168.3.10) 및 Redis 세션 저장 경로(tcp://192.168.1.10:6379?auth=root)를 설정하여, WAS 1 서버로서의 역할을 수행합니다.
@@ -43,7 +43,7 @@ curl -fsSL https://raw.githubusercontent.com/Cybecho/LinuxSetup/main/on_premises
 
 **설치 명령:**  
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Cybecho/LinuxSetup/main/on_premises_3tier_project/config_server_was2.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/Cybecho/Megazone_Bootcamp/main/on_premises_3tier_project/config_server_was2.sh | sudo bash
 ```
 
 > WAS 2도 WAS 1과 동일한 구성을 사용하며, 부하분산 환경에서 함께 동작합니다.
@@ -55,7 +55,7 @@ curl -fsSL https://raw.githubusercontent.com/Cybecho/LinuxSetup/main/on_premises
 
 **설치 명령:**  
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Cybecho/LinuxSetup/main/on_premises_3tier_project/config_server_db.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/Cybecho/Megazone_Bootcamp/main/on_premises_3tier_project/config_server_db.sh | sudo bash
 ```
 
 > 이 스크립트에서는 MariaDB 컨테이너를 실행하며, 초기화 SQL과 호스트 바인드 마운트(/root/docker/volumes)를 통해 데이터가 192.168.3.10에서 안전하게 저장되도록 설정합니다.
