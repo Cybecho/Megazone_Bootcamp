@@ -1,0 +1,219 @@
+Vagrant.configure("2") do |config|
+    config.vm.box = "ubuntu/jammy64"
+    config.vm.box_version = "20241002"
+  
+    nodes = [
+      {name: 'SERVER-0-ROUTER', adapters: [
+        {net: "vboxnet1", ip: "192.168.1.250"},
+        {net: "vboxnet2", ip: "192.168.2.250"},
+        {net: "vboxnet3", ip: "192.168.3.250"},
+        {net: "vboxnet4", ip: "192.168.4.250"}
+      ], nat: true, ports: [2201, 80, 443]},
+      {name: 'SERVER-1-WEB', adapters: [
+        {net: "vboxnet1", ip: "192.168.1.10"},
+        {net: "vboxnet5", ip: "120.0.0.10"}
+      ], port: 2202},
+      {name: 'SERVER-2-1-WAS1', adapters: [
+        {net: "vboxnet2", ip: "192.168.2.10"},
+        {net: "vboxnet5", ip: "120.0.0.21"}
+      ], port: 2203},
+      {name: 'SERVER-2-2-WAS2', adapters: [
+        {net: "vboxnet2", ip: "192.168.2.20"},
+        {net: "vboxnet5", ip: "120.0.0.22"}
+      ], port: 2204},
+      {name: 'SERVER-3-DB', adapters: [
+        {net: "vboxnet3", ip: "192.168.3.10"},
+        {net: "vboxnet5", ip: "120.0.0.30"}
+      ], port: 2205},
+      {name: 'SERVER-4-Bastion', adapters: [
+        {net: "vboxnet4", ip: "192.168.4.10"},
+        {net: "vboxnet5", ip: "120.0.0.40"}
+      ], port: 2206},
+    ]
+  
+    nodes.each do |node|
+      config.vm.define node[:name], autostart: true do |machine|
+        machine.vm.hostname = node[:name]
+  
+        machine.vm.provider "virtualbox" do |vb|
+          vb.name = node[:name]
+          vb.memory = "2048"
+          vb.cpus = "2"
+          vb.customize ["modifyvm", :id, "--groups", "/nslookup"]
+        end
+  
+        # NAT 호스트는 node[:ports] 배열에 있는 모든 포트를 포워딩
+        if node[:nat]
+          node[:ports].each do |port|
+            machine.vm.network "forwarded_port", guest: (port == 2201 ? 22 : port), host: port, auto_correct: true
+          end
+        else
+          machine.vm.network "forwarded_port", guest: 22, host: node[:port], auto_correct: true
+        end
+  
+        node[:adapters].each do |adapter|
+          machine.vm.network "private_network", ip: adapter[:ip], virtualbox__hostonly: adapter[:net]
+        end
+  
+        machine.vm.provision "shell", inline: <<-'SHELL'
+          # 에러가 발생해도 provisioning이 중단되지 않도록 설정
+          set +e
+  
+          apt-get update -y || true
+          apt-get upgrade -y || true
+  
+          # Docker 등 기본 패키지 설치 스크립트
+          curl -fsSL https://raw.githubusercontent.com/Cybecho/LinuxSetup/main/install_package_all.sh | bash || true
+  
+          echo "root:root" | chpasswd || true
+  
+          # 서버별 Netplan 설정
+          case "$(hostname)" in
+            SERVER-0-ROUTER)
+              # 간단한 라우팅 설정 & IP 포워딩
+              echo 1 > /proc/sys/net/ipv4/ip_forward
+              echo "net.ipv4.ip_forward=1" >> /etc/sysctl.conf
+  
+              cat <<EOF > /etc/netplan/50-vagrant.yaml
+  network:
+    version: 2
+    renderer: networkd
+    ethernets:
+      enp0s8:
+        addresses:
+          - 192.168.1.250/24
+      enp0s9:
+        addresses:
+          - 192.168.2.250/24
+      enp0s10:
+        addresses:
+          - 192.168.3.250/24
+      enp0s11:
+        addresses:
+          - 192.168.4.250/24
+  EOF
+              ;;
+            SERVER-1-WEB)
+              cat <<EOF > /etc/netplan/50-vagrant.yaml
+  network:
+    version: 2
+    renderer: networkd
+    ethernets:
+      enp0s8:
+        addresses:
+          - 192.168.1.10/24
+        routes:
+          - to: 192.168.0.0/16
+            via: 192.168.1.250
+            metric: 50
+      enp0s9:
+        addresses:
+          - 120.0.0.10/24
+        routes:
+          - to: 120.0.0.0/8
+            scope: link
+  EOF
+              ;;
+            SERVER-2-1-WAS1)
+              cat <<EOF > /etc/netplan/50-vagrant.yaml
+  network:
+    version: 2
+    renderer: networkd
+    ethernets:
+      enp0s8:
+        addresses:
+          - 192.168.2.10/24
+        routes:
+          - to: 192.168.1.0/24
+            via: 192.168.2.250
+            metric: 50
+          - to: 192.168.3.0/24
+            via: 192.168.2.250
+            metric: 50
+      enp0s9:
+        addresses:
+          - 120.0.0.21/24
+        routes:
+          - to: 120.0.0.0/8
+            scope: link
+  EOF
+              ;;
+            SERVER-2-2-WAS2)
+              cat <<EOF > /etc/netplan/50-vagrant.yaml
+  network:
+    version: 2
+    renderer: networkd
+    ethernets:
+      enp0s8:
+        addresses:
+          - 192.168.2.20/24
+        routes:
+          - to: 192.168.1.0/24
+            via: 192.168.2.250
+            metric: 50
+          - to: 192.168.3.0/24
+            via: 192.168.2.250
+            metric: 50
+      enp0s9:
+        addresses:
+          - 120.0.0.22/24
+        routes:
+          - to: 120.0.0.0/8
+            scope: link
+  EOF
+              ;;
+            SERVER-3-DB)
+              cat <<EOF > /etc/netplan/50-vagrant.yaml
+  network:
+    version: 2
+    renderer: networkd
+    ethernets:
+      enp0s8:
+        addresses:
+          - 192.168.3.10/24
+        routes:
+          - to: 192.168.2.0/24
+            via: 192.168.3.250
+            metric: 50
+      enp0s9:
+        addresses:
+          - 120.0.0.30/24
+        routes:
+          - to: 120.0.0.0/8
+            scope: link
+  EOF
+              ;;
+            SERVER-4-Bastion)
+              cat <<EOF > /etc/netplan/50-vagrant.yaml
+  network:
+    version: 2
+    renderer: networkd
+    ethernets:
+      enp0s8:
+        addresses:
+          - 192.168.4.10/24
+        routes:
+          - to: 192.168.0.0/16
+            via: 192.168.4.250
+            metric: 50
+      enp0s9:
+        addresses:
+          - 120.0.0.40/24
+        routes:
+          - to: 120.0.0.0/8
+            scope: link
+  EOF
+              ;;
+          esac
+  
+          # netplan 적용. 에러 발생해도 프로비저닝 중단되지 않도록
+          netplan apply || true
+  
+          # Docker 서비스 시작 및 활성화. 에러 발생해도 계속 진행
+          systemctl start docker || true
+          systemctl enable docker || true
+        SHELL
+      end
+    end
+  end
+  
