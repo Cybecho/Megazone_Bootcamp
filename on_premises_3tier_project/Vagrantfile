@@ -46,42 +46,39 @@ Vagrant.configure("2") do |config|
   nodes.each do |node|
     config.vm.define node[:name], autostart: true do |machine|
       machine.vm.hostname = node[:name]
-      
-      # SSH 키 인증 제거 및 비밀번호 인증 자동 사용 설정
-      machine.ssh.insert_key      = false
-      machine.ssh.username        = "vagrant"
-      machine.ssh.password        = "vagrant"
-      machine.ssh.private_key_path = []  # 키 파일 사용 안 함
 
       machine.vm.provider "virtualbox" do |vb|
         vb.name = node[:name]
         vb.memory = "2048"
         vb.cpus = "2"
-        vb.customize ["modifyvm", :id, "--groups", "/nslookup"]
       end
 
+      # NAT 호스트는 node[:ports] 배열에 있는 모든 포트를 포워딩
       if node[:nat]
-        node[:ports].each do |port|
+        Array(node[:ports]).each do |port|
           machine.vm.network "forwarded_port", guest: (port == 2201 ? 22 : port), host: port, auto_correct: true
         end
       else
         machine.vm.network "forwarded_port", guest: 22, host: node[:port], auto_correct: true
-      end
+      end      
 
       node[:adapters].each do |adapter|
         machine.vm.network "private_network", ip: adapter[:ip], virtualbox__hostonly: adapter[:net]
       end
 
       machine.vm.provision "shell", inline: <<-'SHELL'
+        # 에러가 발생해도 provisioning이 중단되지 않도록 설정
         set +e
 
         apt-get update -y || true
         apt-get upgrade -y || true
 
+        # Docker 등 기본 패키지 설치 스크립트
         curl -fsSL https://raw.githubusercontent.com/Cybecho/Megazone_Bootcamp/main/install_package_all.sh | bash || true
 
         echo "root:root" | chpasswd || true
 
+        # SSH 설정: 비밀번호 인증 활성화 (키 기반 인증 제거)
         sudo sed -i 's/^PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config
         sudo systemctl restart ssh
 
@@ -215,19 +212,19 @@ EOF
         case "$(hostname)" in
           SERVER-1-WEB)
             echo "WEB 서버 설정 스크립트 실행 중..."
-            curl -fsSL https://raw.githubusercontent.com/Cybecho/Megazone_Bootcamp/main/on_premises_3tier_project/config_server_web.sh | sudo bash
+            ;;curl -fsSL https://raw.githubusercontent.com/Cybecho/Megazone_Bootcamp/main/on_premises_3tier_project/config_server_web.sh | sudo bash
             ;;
           SERVER-2-1-WAS1)
             echo "WAS 1 서버 설정 스크립트 실행 중..."
-            curl -fsSL https://raw.githubusercontent.com/Cybecho/Megazone_Bootcamp/main/on_premises_3tier_project/config_server_was1.sh | sudo bash
+            ;;curl -fsSL https://raw.githubusercontent.com/Cybecho/Megazone_Bootcamp/main/on_premises_3tier_project/config_server_was1.sh | sudo bash
             ;;
           SERVER-2-2-WAS2)
             echo "WAS 2 서버 설정 스크립트 실행 중..."
-            curl -fsSL https://raw.githubusercontent.com/Cybecho/Megazone_Bootcamp/main/on_premises_3tier_project/config_server_was2.sh | sudo bash
+            ;;curl -fsSL https://raw.githubusercontent.com/Cybecho/Megazone_Bootcamp/main/on_premises_3tier_project/config_server_was2.sh | sudo bash
             ;;
           SERVER-3-DB)
             echo "DB 서버 설정 스크립트 실행 중..."
-            curl -fsSL https://raw.githubusercontent.com/Cybecho/Megazone_Bootcamp/main/on_premises_3tier_project/config_server_db.sh | sudo bash
+            ;;curl -fsSL https://raw.githubusercontent.com/Cybecho/Megazone_Bootcamp/main/on_premises_3tier_project/config_server_db.sh | sudo bash
             ;;
         esac
       SHELL
