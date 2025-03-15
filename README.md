@@ -71,3 +71,9 @@ curl -fsSL https://raw.githubusercontent.com/Cybecho/Megazone_Bootcamp/main/on_p
 - **DB (192.168.3.10):** MariaDB 컨테이너
 
 제공된 각 URL의 스크립트를 해당 서버에서 실행하면, curl 명령어 한 줄로 자동 설치가 진행됩니다. 이를 통해 온프레미스 환경에서 3티어 아키텍처가 자동으로 설정됩니다.
+
+### 도커 재설치
+
+```
+curl -fsSL https://raw.githubusercontent.com/Cybecho/Megazone_Bootcamp/main/on_premises_3tier_project/reinstall_docker.sh | sudo bash
+```
