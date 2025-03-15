@@ -7,9 +7,10 @@ Vagrant.configure("2") do |config|
       {net: "vboxnet1", ip: "192.168.1.250"},
       {net: "vboxnet2", ip: "192.168.2.250"},
       {net: "vboxnet3", ip: "192.168.3.250"},
-      {net: "vboxnet4", ip: "192.168.4.250"}
+      {net: "vboxnet4", ip: "192.168.4.250"},
+      {net: "vboxnet5", ip: "192.168.5.250"}    # 새 네트워크 추가
     ], nat: true, ports: [2201]},
-    
+
     {name: 'SERVER-1-WEB', adapters: [
       {net: "vboxnet1", ip: "192.168.1.10"}
     ], nat: true, port_forwarding: [
@@ -29,11 +30,17 @@ Vagrant.configure("2") do |config|
       {net: "vboxnet3", ip: "192.168.3.10"}
     ]},
 
+    # Basiton 용
     {name: 'SERVER-4-Bastion', adapters: [
       {net: "vboxnet4", ip: "192.168.4.10"}
     ], nat: true, port_forwarding: [
       {host: "127.0.0.1", host_port: 22222, guest_ip: "192.168.4.10", guest_port: 22}
-    ]}
+    ]},
+
+    # 도커 레지스트리, CI/CD, GitLab 용
+    {name: 'SERVER-5-CICD', adapters: [
+      {net: "vboxnet5", ip: "192.168.5.10"}
+    ]},
   ]
 
   nodes.each do |node|
@@ -53,7 +60,6 @@ Vagrant.configure("2") do |config|
         vb.customize ["modifyvm", :id, "--groups", "/nslookup"]
       end
 
-      # NAT 설정: 포트 포워딩 (필요한 경우)
       if node[:nat]
         node[:ports].each do |port|
           machine.vm.network "forwarded_port", guest: (port == 2201 ? 22 : port), host: port, auto_correct: true
@@ -62,28 +68,23 @@ Vagrant.configure("2") do |config|
         machine.vm.network "forwarded_port", guest: 22, host: node[:port], auto_correct: true
       end
 
-      # Private network 어댑터 설정
       node[:adapters].each do |adapter|
         machine.vm.network "private_network", ip: adapter[:ip], virtualbox__hostonly: adapter[:net]
       end
 
-      # 프로비저닝: 시스템 업데이트, 패키지 설치 및 SSH 비밀번호 인증 활성화
       machine.vm.provision "shell", inline: <<-'SHELL'
         set +e
 
         apt-get update -y || true
         apt-get upgrade -y || true
 
-        # 기본 패키지 설치 (필요시)
         curl -fsSL https://raw.githubusercontent.com/Cybecho/Megazone_Bootcamp/main/install_package_all.sh | bash || true
 
         echo "root:root" | chpasswd || true
 
-        # SSH 설정: 비밀번호 인증 활성화 (키 기반 인증 제거)
         sudo sed -i 's/^PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config
         sudo systemctl restart ssh
 
-        # 서버별 Netplan 설정
         case "$(hostname)" in
           SERVER-0-ROUTER)
             echo 1 > /proc/sys/net/ipv4/ip_forward
@@ -105,6 +106,9 @@ network:
     enp0s16:
       addresses:
         - 192.168.4.250/24
+    enp0s17:
+      addresses:
+        - 192.168.5.250/24
 EOF
             ;;
           SERVER-1-WEB)
@@ -183,6 +187,24 @@ network:
           via: 192.168.4.250
 EOF
             ;;
+          SERVER-5-CICD)
+            cat <<EOF > /etc/netplan/50-vagrant.yaml
+network:
+  version: 2
+  renderer: networkd
+  ethernets:
+    enp0s8:
+      addresses:
+        - 192.168.5.10/24
+      routes:
+        - to: 192.168.1.0/24
+          via: 192.168.5.250
+        - to: 192.168.2.0/24
+          via: 192.168.5.250
+        - to: 192.168.3.0/24
+          via: 192.168.5.250
+EOF
+            ;;
         esac
 
         netplan apply || true
@@ -190,7 +212,6 @@ EOF
         systemctl start docker || true
         systemctl enable docker || true
 
-        # 각 서버에 따른 추가 설정 스크립트 실행
         case "$(hostname)" in
           SERVER-1-WEB)
             echo "WEB 서버 설정 스크립트 실행 중..."
