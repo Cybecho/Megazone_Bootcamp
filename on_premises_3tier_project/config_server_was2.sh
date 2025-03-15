@@ -3,6 +3,8 @@
 # 스크립트 실행 중 오류 발생 시 중단
 # set -e
 
+sudo systemctl start docker
+
 echo "=== [1] 도커 디렉토리 생성 ==="
 mkdir -p /root/docker/was
 

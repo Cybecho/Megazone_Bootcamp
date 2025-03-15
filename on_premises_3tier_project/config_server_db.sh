@@ -3,6 +3,8 @@
 # 스크립트 실행 중 오류 발생 시 중단
 # set -e
 
+sudo systemctl start docker
+
 # 1. 작업 디렉토리 생성 (MariaDB 관련 설정)
 mkdir -p /root/docker/mariadb
 
