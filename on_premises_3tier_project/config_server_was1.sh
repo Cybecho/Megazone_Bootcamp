@@ -12,22 +12,18 @@ echo "=== [2] WAS용 index.php 생성 중 ==="
 cat <<'EOF' > /root/docker/was/index.php
 <?php
 session_start();
-
-// DB 연결
 try {
     $db = new PDO('mysql:host=192.168.3.10;dbname=StyleSanda;charset=utf8mb4', 'root', 'root');
 } catch (PDOException $e) {
     die("DB connection failed: " . $e->getMessage());
 }
 
-// 세션 방문 횟수 증가
 if (!isset($_SESSION['visit_count'])) {
     $_SESSION['visit_count'] = 1;
 } else {
     $_SESSION['visit_count']++;
 }
 
-// 구매 버튼 누를 시 재고 1 감소
 if (isset($_POST['buy'])) {
     $stmt = $db->prepare("UPDATE products SET quantity = quantity - 1 WHERE product_id = 1 AND quantity > 0");
     $stmt->execute();
@@ -37,22 +33,127 @@ if (isset($_POST['buy'])) {
 }
 
 $product = $db->query("SELECT * FROM products WHERE product_id = 1")->fetch();
+$containerId = gethostname();
 ?>
 <!DOCTYPE html>
-<html>
+<html lang="ko">
 <head>
     <meta charset="utf-8">
-    <title>상품 페이지</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title><?= htmlspecialchars($product['product_name']) ?> - 구매 페이지</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            background-color: #f5f5f5;
+        }
+        .product-page {
+            max-width: 1200px;
+            margin: 20px auto;
+            background: #fff;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .product-header {
+            display: flex;
+            flex-wrap: wrap;
+            border-bottom: 1px solid #e1e1e1;
+            padding-bottom: 20px;
+            margin-bottom: 20px;
+        }
+        .product-image {
+            flex: 1;
+            min-width: 300px;
+            text-align: center;
+        }
+        .product-image img {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 5px;
+            background: #fff;
+        }
+        .product-details {
+            flex: 2;
+            padding: 20px;
+        }
+        .product-title {
+            font-size: 2em;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        .product-price {
+            font-size: 1.8em;
+            color: #B12704;
+            margin: 10px 0;
+        }
+        .stock-info {
+            font-size: 1em;
+            margin: 15px 0;
+            color: #555;
+        }
+        .product-description {
+            margin: 20px 0;
+            line-height: 1.6;
+            color: #555;
+        }
+        .buy-button {
+            background-color: #ffd814;
+            border: 1px solid #fcd200;
+            padding: 15px 25px;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background 0.3s;
+        }
+        .buy-button:hover {
+            background-color: #f7ca00;
+        }
+        .additional-info {
+            font-size: 0.9em;
+            color: #888;
+            margin-top: 20px;
+            border-top: 1px solid #e1e1e1;
+            padding-top: 10px;
+        }
+        @media (max-width: 768px) {
+            .product-header {
+                flex-direction: column;
+            }
+            .product-details {
+                padding: 10px;
+            }
+        }
+    </style>
 </head>
 <body>
-    <h1><?= htmlspecialchars($product['product_name']) ?></h1>
-    <p>THIS IS WAS 1</p>
-    <p>남은 수량: <?= htmlspecialchars($product['quantity']) ?></p>
-    <p>Session ID: <?= session_id() ?></p>
-    <p>방문 횟수: <?= $_SESSION['visit_count'] ?></p>
-    <form method="POST">
-        <button type="submit" name="buy">구매하기</button>
-    </form>
+    <div class="product-page">
+        <div class="product-header">
+            <div class="product-image">
+                <img src="<?= htmlspecialchars($product['image_url']) ?>" alt="<?= htmlspecialchars($product['product_name']) ?>">
+            </div>
+            <div class="product-details">
+                <h1 class="product-title"><?= htmlspecialchars($product['product_name']) ?></h1>
+                <p class="product-price">₩560,000</p>
+                <div class="stock-info">
+                    남은 수량: <?= htmlspecialchars($product['quantity']) ?>
+                </div>
+                <p class="product-description">
+                    이 제품은 최신 트렌드를 반영한 프리미엄 상품입니다. 최고의 품질과 성능을 자랑하며, 지금 구매하시면 특별한 혜택을 누리실 수 있습니다.
+                </p>
+                <form method="POST">
+                    <button type="submit" name="buy" class="buy-button">바로 구매하기</button>
+                </form>
+            </div>
+        </div>
+        <div class="additional-info">
+            <p>Session ID: <?= session_id() ?></p>
+            <p>방문 횟수: <?= $_SESSION['visit_count'] ?></p>
+            <p>컨테이너 식별자: <?= htmlspecialchars($containerId) ?></p>
+        </div>
+    </div>
 </body>
 </html>
 EOF

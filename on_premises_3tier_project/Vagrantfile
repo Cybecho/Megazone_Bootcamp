@@ -1,16 +1,27 @@
 Vagrant.configure("2") do |config|
-  # 기본 박스 설정
   config.vm.box = "ubuntu/jammy64"
   config.vm.box_version = "20241002"
+  
+  # SSH 설정
+  config.ssh.username = "vagrant"
+  # config.ssh.password = "vagrant"  # 주석 처리 또는 제거
+  config.ssh.insert_key = true      # 다시 true로 변경
+  config.ssh.keys_only = true       # 다시 true로 변경
+  # config.ssh.private_key_path = []  # 주석 처리 또는 제거
+  config.ssh.verify_host_key = :accept_new  # 기본값으로 변경
+  
+  # 추가할 설정
+  # config.vm.communicator = "ssh"
+  # config.ssh.forward_agent = false
+  # config.ssh.forward_x11 = false
 
-  # 노드 목록 정의: 각 노드는 이름, 네트워크 어댑터, NAT/포트 설정 등을 포함
   nodes = [
     {name: 'SERVER-0-ROUTER', adapters: [
       {net: "vboxnet1", ip: "192.168.1.250"},
       {net: "vboxnet2", ip: "192.168.2.250"},
       {net: "vboxnet3", ip: "192.168.3.250"},
       {net: "vboxnet4", ip: "192.168.4.250"},
-      {net: "vboxnet5", ip: "192.168.5.250"}    # 새 네트워크 추가
+      {net: "vboxnet5", ip: "192.168.5.250"}
     ], nat: true, ports: [2201]},
 
     {name: 'SERVER-1-WEB', adapters: [
@@ -32,69 +43,65 @@ Vagrant.configure("2") do |config|
       {net: "vboxnet3", ip: "192.168.3.10"}
     ]},
 
-    # Bastion 서버: 관리 접근을 위한 서버
     {name: 'SERVER-4-Bastion', adapters: [
       {net: "vboxnet4", ip: "192.168.4.10"}
     ], nat: true, port_forwarding: [
       {host: "127.0.0.1", host_port: 22222, guest_ip: "192.168.4.10", guest_port: 22}
     ]},
 
-    # 도커 레지스트리, CI/CD, GitLab 서버
     {name: 'SERVER-5-CICD', adapters: [
       {net: "vboxnet5", ip: "192.168.5.10"}
-    ]}
+    ]},
   ]
 
-  # 각 노드에 대해 설정 적용
   nodes.each do |node|
     config.vm.define node[:name], autostart: true do |machine|
-      # 호스트명 설정
       machine.vm.hostname = node[:name]
 
-      # VirtualBox 리소스 설정 (메모리, CPU 등)
       machine.vm.provider "virtualbox" do |vb|
         vb.name = node[:name]
-        vb.memory = "2048"
-        vb.cpus = "2"
+        vb.memory = "4096"
+        vb.cpus = "4"
       end
 
-      # NAT 환경일 경우, 포트 포워딩 설정 (예: SSH, HTTP 등)
-      if node[:nat]
+      # NAT 및 기본 포트 포워딩 설정 (node[:ports]가 있을 경우만)
+      if node[:nat] && node[:ports]
         Array(node[:ports]).each do |port|
           machine.vm.network "forwarded_port", guest: (port == 2201 ? 22 : port), host: port, auto_correct: true
         end
-      else
-        machine.vm.network "forwarded_port", guest: 22, host: node[:port], auto_correct: true
       end
 
-      # 각 네트워크 어댑터에 대해 프라이빗 네트워크 설정 적용
+      # 추가 포트 포워딩 설정 (node[:port_forwarding]가 있을 경우)
+      if node[:port_forwarding]
+        Array(node[:port_forwarding]).each do |pf|
+          machine.vm.network "forwarded_port", guest: pf[:guest_port], host: pf[:host_port],
+                                guest_ip: pf[:guest_ip], host_ip: pf[:host]
+        end
+      end
+
       node[:adapters].each do |adapter|
         machine.vm.network "private_network", ip: adapter[:ip], virtualbox__hostonly: adapter[:net]
       end
-
-      # 각 VM에서 실행될 프로비저닝 스크립트
+      
+      # ★ 쉘 프로비저닝
       machine.vm.provision "shell", inline: <<-'SHELL'
-        # 에러 발생 시 provisioning 중단 방지
-        set +e
-
-        # 시스템 업데이트 및 업그레이드
+        # SSH 설정 부분 수정
+        sudo sed -i 's/PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config
+        sudo sed -i 's/PubkeyAuthentication no/PubkeyAuthentication yes/' /etc/ssh/sshd_config
+        
+        # SSH 서비스 재시작
+        sudo systemctl restart ssh
+        
+        # 나머지 코드는 그대로 유지
         apt-get update -y || true
         apt-get upgrade -y || true
 
-        # Docker 및 기타 필요한 패키지 설치 (외부 스크립트 사용)
+        # Docker 등 기본 패키지 설치 스크립트
         curl -fsSL https://raw.githubusercontent.com/Cybecho/Megazone_Bootcamp/main/install_package_all.sh | bash || true
 
-        # 루트 계정 비밀번호 변경 (root:root)
-        echo "root:root" | chpasswd || true
 
-        # SSH 설정: 비밀번호 인증 활성화 (키 기반 인증 비활성화)
-        sudo sed -i 's/^PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config
-        sudo systemctl restart ssh
-
-        # 각 서버별 네트워크 설정 (netplan 사용)
         case "$(hostname)" in
           SERVER-0-ROUTER)
-            # 라우터 서버: IP 포워딩 활성화 및 다중 네트워크 인터페이스 구성
             echo 1 > /proc/sys/net/ipv4/ip_forward
             echo "net.ipv4.ip_forward=1" >> /etc/sysctl.conf
             cat <<EOF > /etc/netplan/50-vagrant.yaml
@@ -120,7 +127,6 @@ network:
 EOF
             ;;
           SERVER-1-WEB)
-            # 웹 서버: IP 및 라우팅 설정
             cat <<EOF > /etc/netplan/50-vagrant.yaml
 network:
   version: 2
@@ -135,7 +141,6 @@ network:
 EOF
             ;;
           SERVER-2-1-WAS1)
-            # WAS1 서버: IP 및 라우팅 설정
             cat <<EOF > /etc/netplan/50-vagrant.yaml
 network:
   version: 2
@@ -147,13 +152,13 @@ network:
       routes:
         - to: 192.168.1.0/24
           via: 192.168.2.250
-          metric: 50
         - to: 192.168.3.0/24
+          via: 192.168.2.250
+        - to: 192.168.5.0/24
           via: 192.168.2.250
 EOF
             ;;
           SERVER-2-2-WAS2)
-            # WAS2 서버: IP 및 라우팅 설정
             cat <<EOF > /etc/netplan/50-vagrant.yaml
 network:
   version: 2
@@ -165,13 +170,13 @@ network:
       routes:
         - to: 192.168.1.0/24
           via: 192.168.2.250
-          metric: 50
         - to: 192.168.3.0/24
+          via: 192.168.2.250
+        - to: 192.168.5.0/24
           via: 192.168.2.250
 EOF
             ;;
           SERVER-3-DB)
-            # 데이터베이스 서버: 네트워크 설정
             cat <<EOF > /etc/netplan/50-vagrant.yaml
 network:
   version: 2
@@ -183,10 +188,11 @@ network:
       routes:
         - to: 192.168.2.0/24
           via: 192.168.3.250
+        - to: 192.168.5.0/24
+          via: 192.168.3.250
 EOF
             ;;
           SERVER-4-Bastion)
-            # Bastion 서버: 네트워크 설정
             cat <<EOF > /etc/netplan/50-vagrant.yaml
 network:
   version: 2
@@ -201,7 +207,6 @@ network:
 EOF
             ;;
           SERVER-5-CICD)
-            # CI/CD 서버: 네트워크 설정
             cat <<EOF > /etc/netplan/50-vagrant.yaml
 network:
   version: 2
@@ -242,7 +247,6 @@ EOF
         # 설정 반영을 위해 Docker 데몬 재시작
         sudo systemctl restart docker || true
 
-        # 각 서버별 추가 설정 (예: WEB, WAS, DB 등)
         case "$(hostname)" in
           SERVER-1-WEB)
             echo "WEB 서버 설정 스크립트 실행 중..."
