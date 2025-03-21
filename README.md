@@ -9,6 +9,16 @@ WAS 2 서버: 192.168.2.20
 DB 서버: 192.168.3.10
 → MariaDB 컨테이너가 실행되며, 데이터는 호스트에 바인드 마운트됩니다.
 
+#### 물리 구성도
+![물리 구성도](https://github.com/Cybecho/Megazone_Bootcamp/blob/main/on_premises_3tier_project/4%EC%B0%A8%20%EC%A0%9C%EC%95%88%EC%84%9C%20%EA%B0%9C%EC%9D%B8%20%EB%AC%BC%EB%A6%AC%EA%B5%AC%EC%84%B1%EB%8F%84.png?raw=true)
+
+#### 논리 구성도
+![논리 구성도](https://github.com/Cybecho/Megazone_Bootcamp/blob/main/on_premises_3tier_project/4%EC%B0%A8%20%EC%A0%9C%EC%95%88%EC%84%9C%20%EA%B0%9C%EC%9D%B8%20%EB%85%BC%EB%A6%AC%EA%B5%AC%EC%84%B1%EB%8F%84.png?raw=true)
+
+#### CI/CD 논리 구성도
+![CICD 논리 구성도](https://github.com/Cybecho/Megazone_Bootcamp/blob/main/on_premises_3tier_project/4%EC%B0%A8%20%EC%A0%9C%EC%95%88%EC%84%9C%20%EA%B0%9C%EC%9D%B8%20%EB%85%BC%EB%A6%AC%EA%B5%AC%EC%84%B1%EB%8F%84%20CICD.png?raw=true)
+
+
 ## 사용법
 
 > 그냥 `Vagrant up` 해주면 됩니다
