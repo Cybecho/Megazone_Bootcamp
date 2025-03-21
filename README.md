@@ -109,12 +109,11 @@ curl -fsSL https://raw.githubusercontent.com/Cybecho/Megazone_Bootcamp/main/on_p
 
 ### CI/CD 서버 설정
 
-**설치 명령:**  
-```bash
-curl -fsSL https://raw.githubusercontent.com/Cybecho/Megazone_Bootcamp/refs/heads/main/on_premises_3tier_project/config_server_cicd.sh | sudo bash
-```
+CI/CD 는 완전히 자동화되지 않았습니다!
 
-> 위 스크립트는 CI/CD 환경 구축에 필요한 기본 설정을 진행하며, Jenkins 서버가 Docker 명령어를 실행할 수 있도록 Docker 그룹 권한 부여, 워크스페이스 구성, Docker Registry 실행 등과 같은 작업을 자동으로 처리합니다.
+[해당 가이드](https://github.com/Cybecho/Megazone_Bootcamp/blob/main/1%EC%B0%A8%20%ED%94%84%EB%A1%9C%EC%A0%9D%ED%8A%B8%20%EA%B0%80%EC%9D%B4%EB%93%9C.md)를 따라 WAS 1 & 2 부분에 컨테이너 감지 데몬을 설정해주어야하고
+
+CI/CD 서버 설정도 수동으로 설정해줘야합니다.
 
 ---
 
