@@ -1,3 +1,6 @@
+# Terraform 설정 파일
+
+
 # Terraform 설정 파일임, AWS 리소스를 관리하기 위한 설정을 포함하고 있음
 terraform {
   required_providers {
