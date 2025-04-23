@@ -559,7 +559,7 @@ resource "aws_db_instance" "rds_primary" {
   password               = var.db_password
   db_subnet_group_name   = aws_db_subnet_group.rds_subnet_group.name
   vpc_security_group_ids = [aws_security_group.rds_sg.id]
-  parameter_group_name   = "default.${var.db_engine}${replace(var.db_engine_version, ".", "")}" # Adjust if using custom parameter group
+  parameter_group_name   = "default.${var.db_engine}${var.db_engine_version}" # Use the correct default format, keeping the dot in the version
 
   # Enable Multi-AZ deployment (creates standby in another AZ)
   multi_az = true
