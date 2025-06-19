@@ -1,6 +1,6 @@
 <mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36" version="26.2.12">
   <diagram name="페이지-1" id="ERhhVk5ujOUQOD0_T1k8">
-    <mxGraphModel dx="1595" dy="1007" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+    <mxGraphModel dx="1507" dy="951" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -53,9 +53,6 @@
           <mxGeometry x="0.1075" y="3" relative="1" as="geometry">
             <mxPoint x="4" y="-14" as="offset" />
           </mxGeometry>
-        </mxCell>
-        <mxCell id="8attIl3rUHplhbKrGd8N-19" value="" style="shape=image;verticalLabelPosition=bottom;labelBackgroundColor=default;verticalAlign=top;aspect=fixed;imageAspect=0;image=https://upload.wikimedia.org/wikipedia/commons/7/77/Rocky_Linux_logo.svg;" vertex="1" parent="1">
-          <mxGeometry x="386" y="188" width="55.25" height="55.25" as="geometry" />
         </mxCell>
         <mxCell id="8attIl3rUHplhbKrGd8N-20" value="Repo Server" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
           <mxGeometry x="369" y="236" width="90" height="30" as="geometry" />
@@ -131,6 +128,9 @@
             <mxPoint x="266.64" y="224.04000000000002" as="sourcePoint" />
             <mxPoint x="372.88" y="224.68" as="targetPoint" />
           </mxGeometry>
+        </mxCell>
+        <mxCell id="8attIl3rUHplhbKrGd8N-48" value="" style="shape=image;verticalLabelPosition=bottom;labelBackgroundColor=default;verticalAlign=top;aspect=fixed;imageAspect=0;editableCssRules=.*;image=data:image/svg+xml,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGZpbGw9Im5vbmUiIHZpZXdCb3g9IjAgMCAxOTIgMTkyIiBoZWlnaHQ9IjQwOTYiIHdpZHRoPSI0MDk2Ij4mI3hhOzxwYXRoIGZpbGw9IiMxMEI5ODEiIGQ9Ik0xODYuNjU4IDEyNy42NThDMTkwLjExOSAxMTcuNzQ2IDE5MiAxMDcuMDkzIDE5MiA5NkMxOTIgNDIuOTgwNyAxNDkuMDE5IDAgOTYgMEM0Mi45ODA3IDAgMCA0Mi45ODA3IDAgOTZDMCAxMjIuMjM0IDEwLjUyMyAxNDYuMDExIDI3LjU3ODMgMTYzLjMzOEwxMjQuOTU4IDY1Ljk1ODRMMTQ5IDkwTDE4Ni42NTggMTI3LjY1OFpNMTY5LjEyMiAxNTguMjA1TDEyNC45NTggMTE0LjA0Mkw1NS43OTc4IDE4My4yMDJDNjguMDI2OSAxODguODQ5IDgxLjY0NTUgMTkyIDk2IDE5MkMxMjUuMjg4IDE5MiAxNTEuNTE0IDE3OC44ODQgMTY5LjEyMiAxNTguMjA1WiIgY2xpcC1ydWxlPSJldmVub2RkIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiLz4mI3hhOzwvc3ZnPg==;" vertex="1" parent="1">
+          <mxGeometry x="384" y="184.62" width="60" height="60" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>
